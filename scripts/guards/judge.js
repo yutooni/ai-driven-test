@@ -45,6 +45,24 @@ function getAllTsFiles(dir, files = []) {
   return files;
 }
 
+function getAllTsFilesIncludingTests(dir, files = []) {
+  if (!existsSync(dir)) return files;
+
+  const entries = readdirSync(dir);
+  for (const entry of entries) {
+    const fullPath = join(dir, entry);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      getAllTsFilesIncludingTests(fullPath, files);
+    } else if (entry.endsWith('.ts')) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
 function detectLayer(filePath) {
   const normalized = filePath.replaceAll('\\', '/');
   for (const layer of LAYERS) {
@@ -244,11 +262,46 @@ function checkDomainDeterminism() {
   };
 }
 
+function checkAntiShortcut() {
+  const files = getAllTsFilesIncludingTests(srcDir);
+  const testFiles = getAllTsFilesIncludingTests(join(rootDir, 'tests'));
+  const allFiles = [...files, ...testFiles];
+
+  const errors = [];
+
+  const shortcutPatterns = [
+    { pattern: /:\s*any\b/, description: 'any' },
+    { pattern: /@ts-ignore/, description: '@ts-ignore' },
+    { pattern: /@ts-expect-error/, description: '@ts-expect-error' },
+    { pattern: /\.skip\(/, description: '.skip(' },
+    { pattern: /\.only\(/, description: '.only(' },
+    { pattern: /TODO temporary/, description: 'TODO temporary' },
+    { pattern: /FIXME temporary/, description: 'FIXME temporary' },
+  ];
+
+  for (const file of allFiles) {
+    const content = readFileSync(file, 'utf-8');
+
+    for (const { pattern, description } of shortcutPatterns) {
+      if (pattern.test(content)) {
+        errors.push(`${file.replace(rootDir + '/', '')}: shortcut detected (${description})`);
+      }
+    }
+  }
+
+  return {
+    name: 'anti-shortcut',
+    ok: errors.length === 0,
+    errors,
+  };
+}
+
 const results = [
   checkDomainPurity(),
   checkDependencyDirection(),
   checkOpenAPIConsistency(),
   checkDomainDeterminism(),
+  checkAntiShortcut(),
 ];
 
 const failed = results.filter(r => !r.ok);
