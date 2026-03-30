@@ -22,11 +22,20 @@ export class EchoMessageUseCase {
 
     const currentTime = this.timeProvider.now();
 
-    if (this.repository.isDuplicate(message, currentTime, this.cooldownMs)) {
+    const duplicateResult = this.repository.isDuplicate(message, currentTime, this.cooldownMs);
+    if (!duplicateResult.ok) {
       return { success: false, error: 'duplicate' };
     }
 
-    this.repository.saveMessage(message, currentTime);
+    if (duplicateResult.value) {
+      return { success: false, error: 'duplicate' };
+    }
+
+    const saveResult = this.repository.saveMessage(message, currentTime);
+    if (!saveResult.ok) {
+      return { success: false, error: 'duplicate' };
+    }
+
     return { success: true, message: echoMessage.getValue() };
   }
 }
