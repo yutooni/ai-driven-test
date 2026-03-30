@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync, mkdirSync, appendFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -9,6 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '..', '..');
 const srcDir = join(rootDir, 'src');
+const logsDir = join(rootDir, 'logs');
+const guardLogPath = join(logsDir, 'guards.ndjson');
 
 const LAYERS = ['presentation', 'usecase', 'domain'];
 
@@ -100,6 +102,71 @@ function detectImportedLayer(importPath) {
     }
   }
   return null;
+}
+
+/**
+ * Extracts JSDoc metadata from source code before the function definition
+ */
+function extractJSDocMetadata(guardName) {
+  const sourceCode = readFileSync(__filename, 'utf-8');
+
+  // Find all JSDoc comments followed by functions
+  const pattern = /\/\*\*([\s\S]*?)\*\/\s*function\s+(\w+)\s*\(/g;
+  let match;
+
+  while ((match = pattern.exec(sourceCode)) !== null) {
+    const [, jsdocContent, functionName] = match;
+
+    if (functionName === guardName) {
+      const whatMatch = jsdocContent.match(/@what\s+(.+?)(?=\n|$)/);
+      const whyMatch = jsdocContent.match(/@why\s+(.+?)(?=\n|$)/);
+      const failureMatch = jsdocContent.match(/@failure\s+(.+?)(?=\n|$)/);
+
+      return {
+        what: whatMatch ? whatMatch[1].trim() : '',
+        why: whyMatch ? whyMatch[1].trim() : '',
+        failure: failureMatch ? failureMatch[1].trim() : '',
+      };
+    }
+  }
+
+  return { what: '', why: '', failure: '' };
+}
+
+/**
+ * Runs a guard function with timing and logging
+ */
+function runGuard(guardFn) {
+  const metadata = extractJSDocMetadata(guardFn.name);
+  const startedAt = new Date().toISOString();
+  const startTime = Date.now();
+
+  const result = guardFn();
+
+  const finishedAt = new Date().toISOString();
+  const durationMs = Date.now() - startTime;
+
+  const enrichedResult = {
+    name: result.name,
+    what: metadata.what,
+    why: metadata.why,
+    failure: metadata.failure,
+    ok: result.ok,
+    errors: result.errors,
+    startedAt,
+    finishedAt,
+    durationMs,
+  };
+
+  // Ensure logs directory exists
+  if (!existsSync(logsDir)) {
+    mkdirSync(logsDir, { recursive: true });
+  }
+
+  // Append to NDJSON log
+  appendFileSync(guardLogPath, JSON.stringify(enrichedResult) + '\n', 'utf-8');
+
+  return result;
 }
 
 /**
@@ -363,12 +430,12 @@ function checkAntiShortcut() {
 }
 
 const results = [
-  checkDomainPurity(),
-  checkUsecasePurity(),
-  checkDependencyDirection(),
-  checkOpenAPIConsistency(),
-  checkDomainDeterminism(),
-  checkAntiShortcut(),
+  runGuard(checkDomainPurity),
+  runGuard(checkUsecasePurity),
+  runGuard(checkDependencyDirection),
+  runGuard(checkOpenAPIConsistency),
+  runGuard(checkDomainDeterminism),
+  runGuard(checkAntiShortcut),
 ];
 
 const failed = results.filter(r => !r.ok);
