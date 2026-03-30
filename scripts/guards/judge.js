@@ -13,7 +13,7 @@ const srcDir = join(rootDir, 'src');
 const LAYERS = ['presentation', 'usecase', 'domain'];
 
 const ALLOWED_DEPENDENCIES = {
-  presentation: ['usecase', 'domain'],
+  presentation: ['usecase'],
   usecase: ['domain'],
   domain: [],
 };
