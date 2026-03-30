@@ -211,10 +211,44 @@ function checkOpenAPIConsistency() {
   };
 }
 
+function checkDomainDeterminism() {
+  const domainDir = join(srcDir, 'domain');
+  if (!existsSync(domainDir)) {
+    return { name: 'domain-determinism', ok: true, errors: [] };
+  }
+
+  const files = getAllTsFiles(domainDir);
+  const errors = [];
+
+  const nondeterministicPatterns = [
+    { pattern: /Date\.now\(\)/, description: 'Date.now()' },
+    { pattern: /new Date\(\)/, description: 'new Date()' },
+    { pattern: /Math\.random\(\)/, description: 'Math.random()' },
+    { pattern: /process\.env/, description: 'process.env' },
+  ];
+
+  for (const file of files) {
+    const content = readFileSync(file, 'utf-8');
+
+    for (const { pattern, description } of nondeterministicPatterns) {
+      if (pattern.test(content)) {
+        errors.push(`${file.replace(rootDir + '/', '')}: non-deterministic code detected (${description})`);
+      }
+    }
+  }
+
+  return {
+    name: 'domain-determinism',
+    ok: errors.length === 0,
+    errors,
+  };
+}
+
 const results = [
   checkDomainPurity(),
   checkDependencyDirection(),
   checkOpenAPIConsistency(),
+  checkDomainDeterminism(),
 ];
 
 const failed = results.filter(r => !r.ok);
