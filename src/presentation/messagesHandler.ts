@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { EchoMessageUseCase } from '../usecase/EchoMessageUseCase.js';
 import { messageRepository } from '../usecase/repositories.js';
+import { SystemTimeProvider } from './SystemTimeProvider.js';
+
+const timeProvider = new SystemTimeProvider();
 
 export const messagesHandler = (req: Request, res: Response): void => {
   const { message } = req.body;
@@ -10,7 +13,7 @@ export const messagesHandler = (req: Request, res: Response): void => {
     return;
   }
 
-  const usecase = new EchoMessageUseCase(messageRepository);
+  const usecase = new EchoMessageUseCase(messageRepository, timeProvider);
   const result = usecase.execute(message);
 
   if (!result.success) {

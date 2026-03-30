@@ -62,4 +62,22 @@ describe('POST /messages', () => {
     expect(response1.status).toBe(200);
     expect(response2.status).toBe(200);
   });
+
+  it('should allow same message after cooldown period', async () => {
+    const app = createApp();
+
+    await request(app)
+      .post('/messages')
+      .send({ message: 'hello' });
+
+    // Wait for cooldown period (5 seconds + buffer)
+    await new Promise(resolve => setTimeout(resolve, 5100));
+
+    const response = await request(app)
+      .post('/messages')
+      .send({ message: 'hello' });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ message: 'hello' });
+  });
 });
