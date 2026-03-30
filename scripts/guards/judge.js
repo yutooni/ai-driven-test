@@ -102,6 +102,11 @@ function detectImportedLayer(importPath) {
   return null;
 }
 
+/**
+ * @what Checks layer dependencies follow: presentation → usecase → domain
+ * @why Enforces strict layered architecture with unidirectional data flow
+ * @failure Layer imports from disallowed layer (e.g., presentation → domain)
+ */
 function checkDependencyDirection() {
   const files = getAllTsFiles(srcDir);
   const errors = [];
@@ -134,6 +139,11 @@ function checkDependencyDirection() {
   };
 }
 
+/**
+ * @what Checks domain layer has no external dependencies (express, etc.)
+ * @why Domain layer must remain pure for testability and portability
+ * @failure Domain contains imports like 'express' or other framework dependencies
+ */
 function checkDomainPurity() {
   const domainDir = join(srcDir, 'domain');
   if (!existsSync(domainDir)) {
@@ -164,6 +174,11 @@ function checkDomainPurity() {
   };
 }
 
+/**
+ * @what Checks usecase layer has no external I/O dependencies
+ * @why Usecase layer should orchestrate domain logic without direct I/O
+ * @failure Usecase contains express, process.env, fetch, or axios
+ */
 function checkUsecasePurity() {
   const usecaseDir = join(srcDir, 'usecase');
   if (!existsSync(usecaseDir)) {
@@ -200,6 +215,11 @@ function checkUsecasePurity() {
   };
 }
 
+/**
+ * @what Checks OpenAPI spec matches router implementation (bidirectional)
+ * @why API contract must be in sync with actual implementation
+ * @failure Route defined in OpenAPI but not implemented, or vice versa
+ */
 function checkOpenAPIConsistency() {
   const openapiPath = join(rootDir, 'openapi', 'openapi.yaml');
   const routerPath = join(srcDir, 'presentation', 'router.ts');
@@ -265,6 +285,11 @@ function checkOpenAPIConsistency() {
   };
 }
 
+/**
+ * @what Checks domain layer has no non-deterministic code
+ * @why Domain logic must be deterministic for reliable testing
+ * @failure Domain contains Date.now(), Math.random(), or process.env
+ */
 function checkDomainDeterminism() {
   const domainDir = join(srcDir, 'domain');
   if (!existsSync(domainDir)) {
@@ -298,6 +323,11 @@ function checkDomainDeterminism() {
   };
 }
 
+/**
+ * @what Checks codebase has no temporary workarounds or shortcuts
+ * @why Prevents technical debt from accumulating in the codebase
+ * @failure Code contains 'any', @ts-ignore, .skip(), .only(), or TODO temporary
+ */
 function checkAntiShortcut() {
   const files = getAllTsFilesIncludingTests(srcDir);
   const testFiles = getAllTsFilesIncludingTests(join(rootDir, 'tests'));
