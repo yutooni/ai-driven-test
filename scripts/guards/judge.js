@@ -429,6 +429,62 @@ function checkAntiShortcut() {
   };
 }
 
+/**
+ * @what Checks repository interface methods return Result<T> or Promise<Result<T>>
+ * @why Enforces consistent error handling through Result type
+ * @failure Repository method returns raw types like boolean, void, string, or Promise<primitive>
+ */
+function checkResultEnforcement() {
+  const domainDir = join(srcDir, 'domain');
+  if (!existsSync(domainDir)) {
+    return { name: 'result-enforcement', ok: true, errors: [] };
+  }
+
+  const files = getAllTsFiles(domainDir).filter(
+    file => file.includes('Repository') && file.endsWith('.ts')
+  );
+
+  const errors = [];
+
+  for (const file of files) {
+    const content = readFileSync(file, 'utf-8');
+
+    // Extract interface methods (methods inside interface blocks)
+    const interfacePattern = /interface\s+\w+Repository\s*\{([^}]+)\}/g;
+    let interfaceMatch;
+
+    while ((interfaceMatch = interfacePattern.exec(content)) !== null) {
+      const interfaceBody = interfaceMatch[1];
+
+      // Match method signatures: methodName(...): ReturnType
+      const methodPattern = /(\w+)\s*\([^)]*\)\s*:\s*([^;]+);/g;
+      let methodMatch;
+
+      while ((methodMatch = methodPattern.exec(interfaceBody)) !== null) {
+        const methodName = methodMatch[1];
+        const returnType = methodMatch[2].trim();
+
+        // Check if return type is Result<...> or Promise<Result<...>>
+        const isValidResult =
+          /^Result</.test(returnType) ||
+          /^Promise<Result</.test(returnType);
+
+        if (!isValidResult) {
+          errors.push(
+            `${file.replace(rootDir + '/', '')}: method '${methodName}' returns '${returnType}' instead of Result<T> or Promise<Result<T>>`
+          );
+        }
+      }
+    }
+  }
+
+  return {
+    name: 'result-enforcement',
+    ok: errors.length === 0,
+    errors,
+  };
+}
+
 const results = [
   runGuard(checkDomainPurity),
   runGuard(checkUsecasePurity),
@@ -436,6 +492,7 @@ const results = [
   runGuard(checkOpenAPIConsistency),
   runGuard(checkDomainDeterminism),
   runGuard(checkAntiShortcut),
+  runGuard(checkResultEnforcement),
 ];
 
 const failed = results.filter(r => !r.ok);
