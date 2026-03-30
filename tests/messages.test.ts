@@ -32,4 +32,34 @@ describe('POST /messages', () => {
     expect(response.status).toBe(400);
     expect(response.body).toHaveProperty('error');
   });
+
+  it('should return 409 when sending duplicate message', async () => {
+    const app = createApp();
+
+    await request(app)
+      .post('/messages')
+      .send({ message: 'hello' });
+
+    const response = await request(app)
+      .post('/messages')
+      .send({ message: 'hello' });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toHaveProperty('error');
+  });
+
+  it('should allow different messages', async () => {
+    const app = createApp();
+
+    const response1 = await request(app)
+      .post('/messages')
+      .send({ message: 'first' });
+
+    const response2 = await request(app)
+      .post('/messages')
+      .send({ message: 'second' });
+
+    expect(response1.status).toBe(200);
+    expect(response2.status).toBe(200);
+  });
 });

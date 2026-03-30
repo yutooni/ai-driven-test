@@ -50,3 +50,12 @@ paths:
                 properties:
                   error:
                     type: string
+        '409':
+          description: Duplicate message detected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string

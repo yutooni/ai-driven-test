@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { EchoMessageUseCase } from '../usecase/EchoMessageUseCase.js';
+import { messageRepository } from '../usecase/repositories.js';
 
 export const messagesHandler = (req: Request, res: Response): void => {
   const { message } = req.body;
@@ -9,13 +10,17 @@ export const messagesHandler = (req: Request, res: Response): void => {
     return;
   }
 
-  const usecase = new EchoMessageUseCase();
+  const usecase = new EchoMessageUseCase(messageRepository);
   const result = usecase.execute(message);
 
-  if (result === null) {
-    res.status(400).json({ error: 'message must not be empty' });
+  if (!result.success) {
+    if (result.error === 'empty') {
+      res.status(400).json({ error: 'message must not be empty' });
+    } else if (result.error === 'duplicate') {
+      res.status(409).json({ error: 'duplicate message detected' });
+    }
     return;
   }
 
-  res.status(200).json({ message: result });
+  res.status(200).json({ message: result.message });
 };
