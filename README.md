@@ -43,17 +43,20 @@
 presentation → usecase → domain
 ```
 
-- **domain**: 他層への依存禁止、外部I/O禁止
-- **usecase**: domainのみ依存可
-- **presentation**: usecase, domainに依存可
+- **domain**: 他層への依存禁止、外部I/O禁止、非決定性禁止
+- **usecase**: domainのみ依存可、外部I/O禁止（orchestration層）
+- **presentation**: usecaseのみ依存可（domainへの直接依存は禁止）
 
 ### 自動検証（Guards）
 
 `npm run guard` で以下を検証：
 
-1. **domain-purity**: domain層に外部依存がないか
-2. **dependency-direction**: レイヤー依存方向が正しいか
-3. **openapi-consistency**: OpenAPI定義とrouter実装が一致するか
+1. **domain-purity**: domain層に外部依存がないか（express等）
+2. **usecase-purity**: usecase層に外部I/O依存がないか（express, process.env, fetch, axios等）
+3. **dependency-direction**: レイヤー依存方向が正しいか（presentation → usecase のみ、presentation → domain は禁止）
+4. **openapi-consistency**: OpenAPI定義とrouter実装が一致するか
+5. **domain-determinism**: domain層に非決定性コードがないか（Date.now, Math.random, process.env等）
+6. **anti-shortcut**: 暫定対応コードがないか（any, @ts-ignore, .skip(), .only()等）
 
 ## 実装済み機能
 
@@ -118,30 +121,56 @@ npm run guard
 
 ## Guard検証例
 
-### ❌ 違反例1: domain層がpresentationに依存
+### ❌ 違反例1: presentation層がdomainに直接依存
 
 ```typescript
-// src/domain/EchoMessage.ts
-import { messagesHandler } from '../presentation/messagesHandler.js'; // NG
+// src/presentation/messagesHandler.ts
+import { EchoMessage } from '../domain/EchoMessage.js'; // NG: usecaseを経由すべき
 ```
 
 ```bash
 npm run guard
 # ✗ guard:dependency-direction failed
-#   - src/domain/EchoMessage.ts: domain must not depend on presentation
+#   - src/presentation/messagesHandler.ts: presentation must not depend on domain
 ```
 
-### ❌ 違反例2: OpenAPI未定義のroute実装
+### ❌ 違反例2: usecase層でprocess.env使用
 
 ```typescript
-// src/presentation/router.ts
-router.get('/undocumented', handler); // OpenAPIに未記載
+// src/usecase/EchoMessageUseCase.ts
+const env = process.env.NODE_ENV; // NG: 外部I/O依存
 ```
 
 ```bash
 npm run guard
-# ✗ guard:openapi-consistency failed
-#   - Router implements GET /undocumented but it's not documented in OpenAPI
+# ✗ guard:usecase-purity failed
+#   - src/usecase/EchoMessageUseCase.ts: external I/O dependency detected (process.env)
+```
+
+### ❌ 違反例3: domain層で非決定性コード
+
+```typescript
+// src/domain/EchoMessage.ts
+const timestamp = Date.now(); // NG: 非決定的
+```
+
+```bash
+npm run guard
+# ✗ guard:domain-determinism failed
+#   - src/domain/EchoMessage.ts: non-deterministic code detected (Date.now())
+```
+
+### ❌ 違反例4: テストにskip残存
+
+```typescript
+// tests/health.test.ts
+it.skip('should return 200', async () => { // NG: 暫定対応
+```
+
+```bash
+npm run guard
+# ✗ guard:anti-shortcut failed
+#   - tests/health.test.ts: shortcut detected (.skip()
 ```
 
 ### ✅ 正常例
@@ -149,8 +178,11 @@ npm run guard
 ```bash
 npm run guard
 # ✓ guard:domain-purity passed
+# ✓ guard:usecase-purity passed
 # ✓ guard:dependency-direction passed
 # ✓ guard:openapi-consistency passed
+# ✓ guard:domain-determinism passed
+# ✓ guard:anti-shortcut passed
 #
 # ✓ All guard checks passed
 ```
@@ -163,8 +195,10 @@ OpenAPI仕様を契約のSSOTとし、実装との整合性を自動検証
 ### 2. レイヤードアーキテクチャ
 依存関係を明確にし、guardで自動検証
 
-### 3. ドメイン純粋性
-domain層は外部依存を持たず、テスタブルで移植性が高い
+### 3. 厳密なレイヤー純粋性
+- domain層: 外部依存なし、非決定性なし、完全にテスタブル
+- usecase層: 外部I/Oなし、orchestration専念
+- presentation層: usecaseのみ依存、domainへの直接アクセス禁止
 
 ### 4. AI協調開発
 人間は設計・判断、AIは実装・検証を担当

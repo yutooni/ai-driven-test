@@ -164,6 +164,42 @@ function checkDomainPurity() {
   };
 }
 
+function checkUsecasePurity() {
+  const usecaseDir = join(srcDir, 'usecase');
+  if (!existsSync(usecaseDir)) {
+    return { name: 'usecase-purity', ok: true, errors: [] };
+  }
+
+  const files = getAllTsFiles(usecaseDir);
+  const errors = [];
+
+  const forbiddenPatterns = [
+    { pattern: /from ['"]express['"]/, description: 'express' },
+    { pattern: /require\(['"]express['"]\)/, description: 'express' },
+    { pattern: /process\.env/, description: 'process.env' },
+    { pattern: /from ['"]node:fetch['"]/, description: 'fetch' },
+    { pattern: /\bfetch\(/, description: 'fetch' },
+    { pattern: /from ['"]axios['"]/, description: 'axios' },
+    { pattern: /require\(['"]axios['"]\)/, description: 'axios' },
+  ];
+
+  for (const file of files) {
+    const content = readFileSync(file, 'utf-8');
+
+    for (const { pattern, description } of forbiddenPatterns) {
+      if (pattern.test(content)) {
+        errors.push(`${file.replace(rootDir + '/', '')}: external I/O dependency detected (${description})`);
+      }
+    }
+  }
+
+  return {
+    name: 'usecase-purity',
+    ok: errors.length === 0,
+    errors,
+  };
+}
+
 function checkOpenAPIConsistency() {
   const openapiPath = join(rootDir, 'openapi', 'openapi.yaml');
   const routerPath = join(srcDir, 'presentation', 'router.ts');
@@ -298,6 +334,7 @@ function checkAntiShortcut() {
 
 const results = [
   checkDomainPurity(),
+  checkUsecasePurity(),
   checkDependencyDirection(),
   checkOpenAPIConsistency(),
   checkDomainDeterminism(),
