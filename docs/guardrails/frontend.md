@@ -184,6 +184,10 @@ export const ClickTest: Story = {
 2. **typecheck**: TypeScript の型チェック
 3. **test**: Vitest によるユニットテスト
 4. **build-storybook**: Storybook のビルド成功確認
+5. **guard**: フロントエンド guardrail チェック
+   - **story-required**: すべてのコンポーネントに story が存在するか
+   - **no-data-fetch-in-presentational**: presentational component に fetch/axios/useSWR が含まれていないか
+   - **ui-anti-shortcut**: any/@ts-ignore/@ts-expect-error/.skip/.only/TODO temporary が含まれていないか
 
 すべて GREEN で初めて commit 可能です。
 
