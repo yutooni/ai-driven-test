@@ -228,10 +228,71 @@ function checkUIAntiShortcut() {
   };
 }
 
+/**
+ * @what Checks page.tsx files are composition-focused with minimal UI implementation
+ * @why Pages should compose components, not implement UI directly
+ * @failure page.tsx has too many JSX lines or className usages (>15 lines or >5 classNames)
+ */
+function checkComponentLayering() {
+  const appDir = join(srcDir, 'app');
+  if (!existsSync(appDir)) {
+    return { name: 'component-layering', ok: true, errors: [] };
+  }
+
+  const files = getAllTsxFiles(appDir);
+  const errors = [];
+
+  // Filter to page.tsx files only
+  const pageFiles = files.filter(file => file.endsWith('page.tsx'));
+
+  const MAX_JSX_LINES = 15;
+  const MAX_CLASSNAME_COUNT = 5;
+
+  for (const file of pageFiles) {
+    const content = readFileSync(file, 'utf-8');
+
+    // Count JSX lines (lines containing < or > but not import/export)
+    const lines = content.split('\n');
+    const jsxLines = lines.filter(line => {
+      const trimmed = line.trim();
+      return (
+        (trimmed.includes('<') || trimmed.includes('>')) &&
+        !trimmed.startsWith('import') &&
+        !trimmed.startsWith('export') &&
+        !trimmed.startsWith('//') &&
+        !trimmed.startsWith('*')
+      );
+    });
+
+    // Count className usages
+    const classNameMatches = content.match(/className=/g);
+    const classNameCount = classNameMatches ? classNameMatches.length : 0;
+
+    if (jsxLines.length > MAX_JSX_LINES) {
+      errors.push(
+        `${file.replace(rootDir + '/', '')}: too many JSX lines (${jsxLines.length} > ${MAX_JSX_LINES}). Extract UI to components.`
+      );
+    }
+
+    if (classNameCount > MAX_CLASSNAME_COUNT) {
+      errors.push(
+        `${file.replace(rootDir + '/', '')}: too many className usages (${classNameCount} > ${MAX_CLASSNAME_COUNT}). Extract UI to components.`
+      );
+    }
+  }
+
+  return {
+    name: 'component-layering',
+    ok: errors.length === 0,
+    errors,
+  };
+}
+
 const results = [
   runGuard(checkStoryRequired),
   runGuard(checkNoDataFetchInPresentational),
   runGuard(checkUIAntiShortcut),
+  runGuard(checkComponentLayering),
 ];
 
 const failed = results.filter(r => !r.ok);

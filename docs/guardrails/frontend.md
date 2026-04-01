@@ -188,6 +188,7 @@ export const ClickTest: Story = {
    - **story-required**: すべてのコンポーネントに story が存在するか
    - **no-data-fetch-in-presentational**: presentational component に fetch/axios/useSWR が含まれていないか
    - **ui-anti-shortcut**: any/@ts-ignore/@ts-expect-error/.skip/.only/TODO temporary が含まれていないか
+   - **component-layering**: page.tsx が composition に寄っているか（JSX行数≤15、className使用数≤5）
 
 すべて GREEN で初めて commit 可能です。
 
