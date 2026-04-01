@@ -9,7 +9,10 @@
     "lint": "eslint src tests",
     "typecheck": "tsc --noEmit",
     "guard": "node scripts/guards/judge.js",
-    "judge": "npm run lint && npm run typecheck && npm test && npm run guard"
+    "judge:backend": "npm run lint && npm run typecheck && npm test && npm run guard",
+    "judge:frontend": "cd frontend && npm run judge",
+    "judge:all": "npm run judge:backend && npm run judge:frontend",
+    "judge": "npm run judge:all"
   },
   "dependencies": {
     "express": "^4.18.2"

@@ -1,0 +1,4 @@
+{
+  "storybookUrl": "http://localhost:6006",
+  "storiesGlob": "src/**/*.stories.@(js|jsx|ts|tsx)"
+}
