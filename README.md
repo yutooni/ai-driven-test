@@ -15,6 +15,7 @@
 ### バックエンド
 
 ```bash
+cd backend
 npm install
 npm run dev  # http://localhost:3000
 ```
@@ -26,6 +27,12 @@ cd frontend
 npm install
 npm run dev       # Next.js: http://localhost:3001
 npm run storybook # Storybook: http://localhost:6006
+```
+
+### 一括インストール
+
+```bash
+npm run install:all
 ```
 
 ### 全体検証
@@ -43,8 +50,7 @@ GitHub で「Use this template」をクリック、またはクローン:
 ```bash
 git clone https://github.com/your-username/ai-driven-test.git
 cd ai-driven-test
-npm install
-cd frontend && npm install && cd ..
+npm run install:all  # backend と frontend の両方をインストール
 ```
 
 ### 2. RFC を書く
@@ -88,13 +94,13 @@ CI で再度 Judge が実行され、GREEN なら merge 可能です。
 
 ```bash
 # バックエンドのサンプル実装を削除
-rm -rf src/domain/EchoMessage.ts
-rm -rf src/domain/MessageRepository.ts
-rm -rf src/usecase/EchoMessageUseCase.ts
-rm -rf src/usecase/TimeProvider.ts
-rm -rf src/presentation/messagesHandler.ts
-rm -rf src/presentation/SystemTimeProvider.ts
-rm -rf tests/messages.test.ts
+rm -rf backend/src/domain/EchoMessage.ts
+rm -rf backend/src/domain/MessageRepository.ts
+rm -rf backend/src/usecase/EchoMessageUseCase.ts
+rm -rf backend/src/usecase/TimeProvider.ts
+rm -rf backend/src/presentation/messagesHandler.ts
+rm -rf backend/src/presentation/SystemTimeProvider.ts
+rm -rf backend/tests/messages.test.ts
 
 # フロントエンドのサンプル実装を削除
 rm -rf frontend/src/components/Button.tsx
@@ -111,16 +117,16 @@ rm -rf docs/rfc/004_prevent_duplicate_message_within_cooldown.md
 rm -rf docs/rfc/101_note_editor_component.md
 
 # OpenAPI からサンプルルートを削除
-# openapi/openapi.yaml を編集して /messages を削除
+# backend/openapi/openapi.yaml を編集して /messages を削除
 
 # router.ts から /messages ルートを削除
-# src/presentation/router.ts を編集
+# backend/src/presentation/router.ts を編集
 
 # 必要最小限のファイルを残す
-# - src/domain/Result.ts (Result<T> 型定義)
-# - src/usecase/repositories.ts (Repository パターンの例)
-# - src/presentation/router.ts (/health のみ残す)
-# - tests/health.test.ts
+# - backend/src/domain/Result.ts (Result<T> 型定義)
+# - backend/src/usecase/repositories.ts (Repository パターンの例)
+# - backend/src/presentation/router.ts (/health のみ残す)
+# - backend/tests/health.test.ts
 # - docs/rfc/001_init.md
 # - docs/guardrails/ (すべて残す)
 # - frontend/src/app/ (page.tsx, layout.tsx を残す)
@@ -230,6 +236,8 @@ page.tsx が composition に寄っているかチェック（JSX 行数≤15、c
 ### バックエンド
 
 ```bash
+cd backend
+
 # 開発サーバー起動
 npm run dev
 
@@ -246,7 +254,7 @@ npm run typecheck
 npm run guard
 
 # Judge（lint + typecheck + test + guard）
-npm run judge:backend
+npm run judge
 ```
 
 ### フロントエンド
@@ -387,7 +395,38 @@ const isDuplicate = result.value; // ok: true の場合のみアクセス可能
 
 ```
 .
-├── CLAUDE.md                   # Claude Code への指示書
+├── backend/                    # バックエンド
+│   ├── src/
+│   │   ├── domain/             # ドメイン層（依存なし）
+│   │   │   ├── EchoMessage.ts
+│   │   │   ├── MessageRepository.ts
+│   │   │   └── Result.ts
+│   │   ├── usecase/            # ユースケース層
+│   │   │   ├── EchoMessageUseCase.ts
+│   │   │   ├── TimeProvider.ts
+│   │   │   └── repositories.ts
+│   │   └── presentation/       # プレゼンテーション層
+│   │       ├── router.ts
+│   │       ├── healthHandler.ts
+│   │       ├── messagesHandler.ts
+│   │       └── SystemTimeProvider.ts
+│   ├── tests/
+│   │   ├── health.test.ts
+│   │   └── messages.test.ts
+│   ├── scripts/guards/         # バックエンド guard スクリプト
+│   │   └── judge.js
+│   ├── openapi/
+│   │   └── openapi.yaml        # API契約（SSOT）
+│   ├── logs/
+│   └── package.json
+├── frontend/                   # フロントエンド
+│   ├── .storybook/             # Storybook 設定
+│   ├── scripts/guards/         # フロントエンド guard スクリプト
+│   ├── src/
+│   │   ├── app/                # Next.js App Router
+│   │   └── components/         # UI コンポーネント
+│   ├── logs/
+│   └── package.json
 ├── docs/
 │   ├── rfc/                    # 仕様定義（Request for Comments）
 │   │   ├── 001-004: バックエンド RFC
@@ -397,35 +436,11 @@ const isDuplicate = result.value; // ok: true の場合のみアクセス可能
 │       ├── coding_rules.md     # コーディング規約（バックエンド）
 │       ├── acceptance_criteria.md
 │       └── frontend.md         # フロントエンド guardrail
-├── frontend/                   # フロントエンド
-│   ├── .storybook/             # Storybook 設定
-│   ├── scripts/guards/         # フロントエンド guard スクリプト
-│   ├── src/
-│   │   ├── app/                # Next.js App Router
-│   │   └── components/         # UI コンポーネント
-│   └── package.json
-├── openapi/
-│   └── openapi.yaml            # API契約（SSOT）
-├── scripts/
-│   └── guards/
-│       └── judge.js            # バックエンド guard スクリプト
-├── src/                        # バックエンド
-│   ├── domain/                 # ドメイン層（依存なし）
-│   │   ├── EchoMessage.ts
-│   │   ├── MessageRepository.ts
-│   │   └── Result.ts
-│   ├── usecase/                # ユースケース層
-│   │   ├── EchoMessageUseCase.ts
-│   │   ├── TimeProvider.ts
-│   │   └── repositories.ts
-│   └── presentation/           # プレゼンテーション層
-│       ├── router.ts
-│       ├── healthHandler.ts
-│       ├── messagesHandler.ts
-│       └── SystemTimeProvider.ts
-└── tests/                      # テスト
-    ├── health.test.ts
-    └── messages.test.ts
+├── .github/workflows/          # CI/CD
+│   └── ci.yml
+├── CLAUDE.md                   # Claude Code への指示書
+├── README.md
+└── package.json                # ルート orchestration
 ```
 
 ## Guard 違反例と修正例
