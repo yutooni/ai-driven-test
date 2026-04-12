@@ -82,6 +82,59 @@ git push
 
 CI で再度 Judge が実行され、GREEN なら merge 可能です。
 
+### 6. テンプレートをリセットして自分のプロジェクトを始める
+
+テンプレートのサンプル実装を削除して、ゼロから始める場合：
+
+```bash
+# バックエンドのサンプル実装を削除
+rm -rf src/domain/EchoMessage.ts
+rm -rf src/domain/MessageRepository.ts
+rm -rf src/usecase/EchoMessageUseCase.ts
+rm -rf src/usecase/TimeProvider.ts
+rm -rf src/presentation/messagesHandler.ts
+rm -rf src/presentation/SystemTimeProvider.ts
+rm -rf tests/messages.test.ts
+
+# フロントエンドのサンプル実装を削除
+rm -rf frontend/src/components/Button.tsx
+rm -rf frontend/src/components/Button.stories.tsx
+rm -rf frontend/src/components/Button.test.tsx
+rm -rf frontend/src/components/NoteEditor.tsx
+rm -rf frontend/src/components/NoteEditor.stories.tsx
+rm -rf frontend/src/components/NoteEditor.test.tsx
+
+# サンプル RFC を削除
+rm -rf docs/rfc/002_add_message_echo.md
+rm -rf docs/rfc/003_prevent_duplicate_message.md
+rm -rf docs/rfc/004_prevent_duplicate_message_within_cooldown.md
+rm -rf docs/rfc/101_note_editor_component.md
+
+# OpenAPI からサンプルルートを削除
+# openapi/openapi.yaml を編集して /messages を削除
+
+# router.ts から /messages ルートを削除
+# src/presentation/router.ts を編集
+
+# 必要最小限のファイルを残す
+# - src/domain/Result.ts (Result<T> 型定義)
+# - src/usecase/repositories.ts (Repository パターンの例)
+# - src/presentation/router.ts (/health のみ残す)
+# - tests/health.test.ts
+# - docs/rfc/001_init.md
+# - docs/guardrails/ (すべて残す)
+# - frontend/src/app/ (page.tsx, layout.tsx を残す)
+```
+
+あるいは、**段階的にサンプルを置き換える**方法もあります：
+
+1. サンプル実装を残したまま、新しい RFC を追加
+2. Claude Code に実装させる
+3. Judge で GREEN を確認
+4. 動作確認後、サンプル実装を削除
+
+この方法なら、テンプレートの使い方を学びながら、徐々に自分のプロジェクトに置き換えられます。
+
 ## 開発フロー
 
 ### バックエンド開発フロー
